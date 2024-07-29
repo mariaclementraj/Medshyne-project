@@ -62,13 +62,9 @@ router.get('/consult-view/:consult_id', (req, res) => {
                 return res.status(404).json({ Result: "Failure", Message: "No consult found with the given ID" });
             }
 
-            const consultData = consultResults[0];
-            const idNo = consultData.id_no;
-            // console.log('Consult found with id_no:', idNo);
-
             // Query for students
             const studentQuery = `
-                SELECT c.id_no, c.name, c.consult_id, c.doctor1, c.class, c.division, c.sick_type, s.upload_photo, s.date_of_birth, p.mobile 
+                SELECT s.upload_photo, c.name, c.id_no, c.consult_id, c.doctor1, c.class, c.division, c.timing, s.date_of_birth, c.sick_type, p.mobile 
                 FROM consult c
                 JOIN students s ON c.id_no = s.id_no
                 JOIN parents p ON s.id_no = p.student_id_no
@@ -77,7 +73,7 @@ router.get('/consult-view/:consult_id', (req, res) => {
 
             // Query for staff
             const staffQuery = `
-                SELECT c.id_no, c.name, c.consult_id, c.doctor1, c.class, c.division, c.sick_type, sf.upload_photo, sf.date_of_birth, sf.mobile 
+                SELECT sf.upload_photo, c.name, c.id_no, c.consult_id, c.doctor1, c.class, c.division, c.timing, sf.date_of_birth, c.sick_type, sf.mobile 
                 FROM consult c
                 JOIN staff sf ON c.id_no = sf.id_no
                 WHERE c.consult_id = ?

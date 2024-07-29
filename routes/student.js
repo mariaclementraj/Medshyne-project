@@ -187,5 +187,81 @@ router.post('/register-student-parent', async (req, res) => {
 });
 
 
+// Helper function to calculate age from date_of_birth
+function calculateAge(dateOfBirth) {
+    const diff = Date.now() - new Date(dateOfBirth).getTime();
+    const ageDt = new Date(diff);
+    return Math.abs(ageDt.getUTCFullYear() - 1970);
+}
+
+// View student and consult details based on id_no
+router.get('/student-and-consult-view/:id_no', (req, res) => {
+    const idNo = req.params.id_no;
+
+    // Query to get student details along with parent's mobile number
+    const studentAndParentQuery = `
+        SELECT 
+            s.upload_photo, 
+            s.name, 
+            s.id_no, 
+            s.department, 
+            s.gender, 
+            s.date_of_birth, 
+            CONCAT(s.class, ' ', s.division) AS Incharge_For, 
+            s.blood_group, 
+            s.address,
+            p.relation AS parent_relation,
+            p.mobile AS parent_mobile, 
+            s.allergies, 
+            s.any_disease, 
+            s.current_health_report,
+            s.past_health_report
+        FROM students s
+        LEFT JOIN parents p ON s.id_no = p.student_id_no
+        WHERE s.id_no = ?
+    `;
+
+    // Query to get consult details based on id_no
+    const consultQuery = `
+    SELECT c.name, c.id_no, c.consult_id, c.doctor1, CONCAT(c.class , ' / ' , c.division) AS Division, c.sick_type, c.timing
+    FROM consult c
+    WHERE c.id_no = ?
+    ORDER BY c.consult_id ASC
+   `;
+
+    db.query(studentAndParentQuery, [idNo], (err, studentResults) => {
+        if (err) {
+            console.error('Error fetching student details', err);
+            return res.status(500).json({ Result: "Failure", Message: "Server error" });
+        }
+
+        if (studentResults.length === 0) {
+            return res.status(404).json({ Result: "Failure", Message: "No student found with the given ID" });
+        }
+
+        // Calculate age and remove date_of_birth for each student
+        const studentData = studentResults.map(student => {
+            const age = calculateAge(student.date_of_birth);
+            const { date_of_birth, ...rest } = student;
+            return { ...rest, age };
+        });
+
+        db.query(consultQuery, [idNo], (err, consultResults) => {
+            if (err) {
+                console.error('Error fetching consult details', err);
+                return res.status(500).json({ Result: "Failure", Message: "Server error" });
+            }
+
+            // Respond with student and consult data
+            return res.status(200).json({ 
+                Result: "Success", 
+                Student: studentData, 
+                Consults: consultResults
+            });
+        });
+    });
+});
+
+
 module.exports = router;
 
